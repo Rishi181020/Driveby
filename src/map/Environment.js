@@ -170,18 +170,18 @@ export class Environment {
 
     for (const line of roads) {
       if (line.length < 2) continue;
-      const pts = this._sampleAlong(line, 45); // sparser sampling
+      const pts = this._sampleAlong(line, 25); // sample every 25m
       for (const { pos, dir } of pts) {
-        if (Math.random() > 0.20) continue; // lower density
+        if (Math.random() > 0.50) continue; // 50% density
 
         const side = new THREE.Vector3().crossVectors(dir, up).normalize();
         
         // Check if near intersection (start or end of this road segment)
-        const nearStart = pos.distanceTo(line[0]) < 15 * m;
-        const nearEnd = pos.distanceTo(line[line.length - 1]) < 15 * m;
+        const nearStart = pos.distanceTo(line[0]) < 12 * m;
+        const nearEnd = pos.distanceTo(line[line.length - 1]) < 12 * m;
         const nearIntersection = nearStart || nearEnd;
         
-        const isCrossing = nearIntersection && (Math.random() < 0.35); // 35% chance to be a crossing ped if near intersection
+        const isCrossing = nearIntersection && (Math.random() < 0.25); // 25% chance to be crossing near intersection
         
         const ped = new THREE.Group();
         const mat = bodyMat.clone();

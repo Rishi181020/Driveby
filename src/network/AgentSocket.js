@@ -8,6 +8,7 @@ export class AgentSocket {
     this.ws = null;
     this._tick = 0;
     this._connected = false;
+    this._backendConnected = false;
     this._connect();
   }
 
@@ -26,7 +27,9 @@ export class AgentSocket {
     this.ws.addEventListener('message', (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'actions') {
+        if (msg.type === 'backend_status') {
+          this._backendConnected = msg.connected;
+        } else if (msg.type === 'actions') {
           for (const act of msg.agents) {
             const agent = this.agents[act.id];
             if (agent) {

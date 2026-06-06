@@ -10,13 +10,27 @@ function startRelay(port = 3001) {
 
     if (type === 'rl_backend') {
       rlBackend = ws;
+      if (browser && browser.readyState === 1) browser.send(JSON.stringify({ type: 'backend_status', connected: true }));
+      
       ws.on('message', (data) => {
         if (browser && browser.readyState === 1) browser.send(data);
       });
-      ws.on('close', () => { rlBackend = null; });
+      
+      ws.on('close', () => { 
+        rlBackend = null; 
+        if (browser && browser.readyState === 1) browser.send(JSON.stringify({ type: 'backend_status', connected: false }));
+      });
     } else {
       // default: browser client
       browser = ws;
+      
+      // Tell the browser immediately if the backend is already connected
+      if (rlBackend && rlBackend.readyState === 1) {
+        browser.send(JSON.stringify({ type: 'backend_status', connected: true }));
+      } else {
+        browser.send(JSON.stringify({ type: 'backend_status', connected: false }));
+      }
+      
       ws.on('message', (data) => {
         if (rlBackend && rlBackend.readyState === 1) rlBackend.send(data);
       });

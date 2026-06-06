@@ -45,18 +45,34 @@ export class NeuralAgent {
     this.reset();
   }
 
-  // Finds a route where the starting spawn point is not inside or too close to a building
+  // Finds a route where the starting spawn point is not inside or too close to a building and within bounds
   _findSafeSpawnRoute() {
     let tries = 50;
     const m = mercatorScale();
     const padding = 2.2 * m; // Safe buffer distance from any building edge
+
+    const bounds = {
+      minLng: -122.404, maxLng: -122.393,
+      minLat: 37.788,  maxLat: 37.797
+    };
+    const minM = worldToMap(bounds.minLng, bounds.minLat, 0);
+    const maxM = worldToMap(bounds.maxLng, bounds.maxLat, 0);
+    const minX = minM.x, maxX = maxM.x;
+    const minY = maxM.y, maxY = minM.y;
 
     while (tries-- > 0) {
       const route = this.roadGraph.getValidRoute();
       const firstWp = route.path[0];
       
       let collides = false;
-      if (window.buildingObstacles) {
+      
+      // 1. Check if out of bounds
+      if (firstWp.x < minX || firstWp.x > maxX || firstWp.y < minY || firstWp.y > maxY) {
+        collides = true;
+      }
+      
+      // 2. Check if inside buildings
+      if (!collides && window.buildingObstacles) {
         for (const b of window.buildingObstacles) {
           if (firstWp.x >= b.minX - padding && firstWp.x <= b.maxX + padding &&
               firstWp.y >= b.minY - padding && firstWp.y <= b.maxY + padding) {
@@ -114,70 +130,94 @@ export class NeuralAgent {
     const m = mercatorScale();
     this.group = new THREE.Group();
 
-    // Custom cuboid car design for agents
+    // High-quality materials for standard lighting reflections
     this._color = new THREE.Color().setHSL(hue, 0.9, 0.55);
-    const paint = new THREE.MeshPhongMaterial({ color: this._color, shininess: 70 });
-    const tyre  = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 30 });
-    const glass = new THREE.MeshPhongMaterial({ color: 0x9fd0ee, opacity: 0.8, transparent: true, shininess: 90 });
-    const light = new THREE.MeshBasicMaterial({ color: 0xfff4c0 });
-    const tail  = new THREE.MeshBasicMaterial({ color: 0xff3322 });
+    const paint = new THREE.MeshStandardMaterial({ 
+      color: this._color, 
+      metalness: 0.85, 
+      roughness: 0.15,
+      name: 'paint'
+    });
+    const tyre  = new THREE.MeshStandardMaterial({ 
+      color: 0x111111, 
+      roughness: 0.9, 
+      metalness: 0.2,
+      name: 'tyre'
+    });
+    const glass = new THREE.MeshStandardMaterial({ 
+      color: 0x050811, 
+      metalness: 0.95, 
+      roughness: 0.05, 
+      name: 'glass'
+    });
+    const light = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff, 
+      emissive: 0xfffcd0, 
+      emissiveIntensity: 2.5,
+      name: 'headlight'
+    });
+    const tail  = new THREE.MeshStandardMaterial({ 
+      color: 0xff3300, 
+      emissive: 0xff0000, 
+      emissiveIntensity: 2.0,
+      name: 'taillight'
+    });
 
-    // Scale factors (oversized by 2.5x like PlayerCar)
+    // Proportions (Sleek minimalist cuboid EV design)
     const scale = m * 2.5;
-    const L = 4.4, W = 1.9;
-    const chassisH = 0.45;
-    const wheelR = 0.36, wheelW = 0.28;
-    const chassisZ = wheelR + 0.04;
+    const L = 4.6, W = 2.0;
+    const bodyH = 0.8;
+    const wheelR = 0.38, wheelW = 0.3;
+    const clearance = wheelR + 0.05;
 
-    // 1. Chassis (Main body slab)
-    const chassis = new THREE.Mesh(new THREE.BoxGeometry(L * scale, W * scale, chassisH * scale), paint);
-    chassis.position.set(0, 0, (chassisZ + chassisH / 2) * scale);
+    // 1. Sleek Cuboid Body
+    // We use a simple BoxGeometry but stylized nicely to look modern
+    const bodyGeo = new THREE.BoxGeometry(L * scale, W * scale, bodyH * scale);
+    const chassis = new THREE.Mesh(bodyGeo, paint);
+    chassis.position.set(0, 0, (clearance + bodyH / 2) * scale);
     this.group.add(chassis);
 
-    // 2. Cabin
-    const cabinL = L * 0.42, cabinH = 0.42;
-    const cabinZ = chassisZ + chassisH;
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinL * scale, W * 0.88 * scale, cabinH * scale), paint);
-    cabin.position.set(-0.25 * scale, 0, (cabinZ + cabinH / 2) * scale);
-    this.group.add(cabin);
+    // 2. Blacked-out Glass Canopy / Roof
+    const roofL = L * 0.55, roofW = W * 0.9, roofH = 0.4;
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(roofL * scale, roofW * scale, roofH * scale), glass);
+    canopy.position.set(-0.2 * scale, 0, (clearance + bodyH + roofH / 2) * scale);
+    this.group.add(canopy);
 
-    // 3. Windows
-    const winBand = new THREE.Mesh(new THREE.BoxGeometry(cabinL * 1.02 * scale, W * 0.9 * scale, cabinH * 0.6 * scale), glass);
-    winBand.position.set(-0.25 * scale, 0, (cabinZ + cabinH * 0.45) * scale);
-    this.group.add(winBand);
-
-    // 4. Wheels
-    const wheelGeo = new THREE.CylinderGeometry(wheelR * scale, wheelR * scale, wheelW * scale, 8);
+    // 3. Futuristic Wheels
+    const wheelGeo = new THREE.CylinderGeometry(wheelR * scale, wheelR * scale, wheelW * scale, 16);
     wheelGeo.rotateX(Math.PI / 2);
-    for (const x of [L * 0.31, -L * 0.31]) {
+
+    for (const x of [L * 0.32, -L * 0.32]) {
       for (const y of [W / 2 - wheelW * 0.35, -(W / 2 - wheelW * 0.35)]) {
-        const w = new THREE.Mesh(wheelGeo, tyre);
-        w.position.set(x * scale, y * scale, wheelR * scale);
-        this.group.add(w);
+        const tyreMesh = new THREE.Mesh(wheelGeo, tyre);
+        tyreMesh.position.set(x * scale, y * scale, wheelR * scale);
+        this.group.add(tyreMesh);
       }
     }
 
-    // 5. Headlights & Taillights
-    for (const y of [W / 2 - 0.3, -(W / 2 - 0.3)]) {
-      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.34 * scale, 0.18 * scale), light);
-      hl.position.set((L / 2 - 0.02) * scale, y * scale, (chassisZ + chassisH * 0.55) * scale);
-      this.group.add(hl);
-      
-      const tl = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.32 * scale, 0.16 * scale), tail);
-      tl.position.set((-L / 2 + 0.02) * scale, y * scale, (chassisZ + chassisH * 0.55) * scale);
-      this.group.add(tl);
-    }
+    // 4. LED Light Bars
+    // Headlight Bar
+    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, W * 0.85 * scale, 0.1 * scale), light);
+    hl.position.set((L / 2 + 0.01) * scale, 0, (clearance + bodyH * 0.6) * scale);
+    this.group.add(hl);
+    
+    // Taillight Bar
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, W * 0.85 * scale, 0.1 * scale), tail);
+    tl.position.set((-L / 2 - 0.01) * scale, 0, (clearance + bodyH * 0.6) * scale);
+    this.group.add(tl);
 
-    // 6. Glowing floating marker sphere on top (visible in Bird's Eye view, depth tested off so it renders on top of buildings)
-    const markerR = 0.6 * scale;
+    // 5. Glowing floating marker sphere on top to locate agents easily
+    const markerR = 0.7 * scale;
     const markerGeo = new THREE.SphereGeometry(markerR, 8, 8);
     const markerMat = new THREE.MeshBasicMaterial({
       color: this._color,
       depthTest: false,
-      depthWrite: false
+      depthWrite: false,
+      transparent: true,
+      opacity: 0.8
     });
     const marker = new THREE.Mesh(markerGeo, markerMat);
-    marker.position.set(0, 0, (chassisZ + chassisH + cabinH + 0.9) * scale); // hover above the cabin
+    marker.position.set(0, 0, (clearance + bodyH + roofH + 1.2) * scale); // hover above the canopy
     marker.renderOrder = 9999;
     this.group.add(marker);
 
@@ -188,6 +228,11 @@ export class NeuralAgent {
     if (this.group) {
       this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
       this.group.rotation.set(0, 0, this.heading - Math.PI / 2);
+      
+      // Rotate LiDAR dome dome smoothly over time
+      if (this.lidarDome) {
+        this.lidarDome.rotation.z += 0.08;
+      }
     }
   }
 
@@ -250,21 +295,20 @@ export class NeuralAgent {
   update(delta, allAgents, environment) {
     const m = mercatorScale();
 
-    // If collided, freeze position and handle timer / resets
+    // If collided, freeze position and handle fail-safe timer / resets (1.0s delay)
     if (this.collided) {
       this.speed = 0;
       this.lastAction = { throttle: 0, steering: 0, brake: 0 };
-      if (window.socket && !window.socket._connected) {
-        this.crashResetTimer -= delta;
-        if (this.crashResetTimer <= 0) {
-          this.reset(true); // reset back to Point A of current route
-        }
+      this.crashResetTimer -= delta;
+      if (this.crashResetTimer <= 0) {
+        this.reset(true); // reset back to Point A of current route
       }
       return;
     }
 
     // If Python server is not connected, use rule-based autopilot fallback
-    if (window.socket && !window.socket._connected) {
+    const serverConnected = window.socket && window.socket._connected && window.socket._backendConnected;
+    if (!serverConnected) {
       this._ruleBasedDrive(delta);
     }
 

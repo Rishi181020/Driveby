@@ -50,13 +50,15 @@ async function main() {
   // --- Training Telemetry Panel ---
   const hud = new TrainingHUD(agents);
 
-  // --- 3D A* Route Visualizer ---
+  const m = mercatorScale();
+
+  // --- 3D A* Route Visualizer (Cylinder segments for thick, high-visibility path) ---
   const pathGeometry = new THREE.BufferGeometry();
   const initPositions = new Float32Array(20 * 3);
   pathGeometry.setAttribute('position', new THREE.BufferAttribute(initPositions, 3));
   const pathMaterial = new THREE.LineBasicMaterial({ 
     color: 0x00f0ff, 
-    linewidth: 4, // slightly thicker
+    linewidth: 4, 
     depthTest: false,
     depthWrite: false
   });
@@ -64,11 +66,31 @@ async function main() {
   pathLine.renderOrder = 9998;
   scene.add(pathLine);
 
+  // Thick cylinder segments connecting the waypoints
+  const pathSegmentsGroup = new THREE.Group();
+  scene.add(pathSegmentsGroup);
+  const segmentGeo = new THREE.CylinderGeometry(0.8 * m, 0.8 * m, 1, 5); // 1.6m thick pipe
+  segmentGeo.rotateX(Math.PI / 2); // align cylinder length with Z axis
+  const segmentMat = new THREE.MeshBasicMaterial({
+    color: 0x00f0ff,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.6
+  });
+  const pathSegments = [];
+  for (let i = 0; i < 19; i++) {
+    const segment = new THREE.Mesh(segmentGeo, segmentMat);
+    segment.renderOrder = 9997;
+    segment.visible = false;
+    pathSegmentsGroup.add(segment);
+    pathSegments.push(segment);
+  }
+
   // Glowing waypoint spheres
   const pathPointsGroup = new THREE.Group();
   scene.add(pathPointsGroup);
-  const m = mercatorScale();
-  const sphereGeo = new THREE.SphereGeometry(1.5 * m, 8, 8);
+  const sphereGeo = new THREE.SphereGeometry(2.0 * m, 8, 8); // 4m diameter (highly visible)
   const sphereMat = new THREE.MeshBasicMaterial({
     color: 0x00a8ff,
     depthTest: false,
@@ -114,18 +136,71 @@ async function main() {
       if (followedAgent.waypoints && followedAgent.waypoints.length > 0) {
         const positionAttr = pathGeometry.attributes.position;
         const m = mercatorScale();
-        for (let i = 0; i < followedAgent.waypoints.length; i++) {
+        const zOffset = 1.2 * m;
+
+        let displayPoints = [];
+        // Add current agent position as the start of the visible line
+        displayPoints.push(new THREE.Vector3(followedAgent.pos.x, followedAgent.pos.y, followedAgent.pos.z + zOffset));
+
+        // Add all upcoming waypoints
+        for (let i = followedAgent.currentWpIdx; i < followedAgent.waypoints.length; i++) {
           const wp = followedAgent.waypoints[i];
-          const zOffset = wp.z + 1.2 * m;
-          positionAttr.setXYZ(i, wp.x, wp.y, zOffset);
-          
-          const sphere = waypointSpheres[i];
+          displayPoints.push(new THREE.Vector3(wp.x, wp.y, wp.z + zOffset));
+        }
+
+        // Fill the path line geometry (up to 20 vertices)
+        for (let i = 0; i < 20; i++) {
+          if (i < displayPoints.length) {
+            positionAttr.setXYZ(i, displayPoints[i].x, displayPoints[i].y, displayPoints[i].z);
+          } else {
+            // Repeat the last point to hide unused segments
+            const last = displayPoints[displayPoints.length - 1];
+            positionAttr.setXYZ(i, last.x, last.y, last.z);
+          }
+        }
+
+        // Hide all decorative spheres and segments first
+        for (let i = 0; i < 20; i++) {
+          if (waypointSpheres[i]) waypointSpheres[i].visible = false;
+          if (pathSegments[i]) pathSegments[i].visible = false;
+        }
+
+        // Place spheres at remaining waypoints
+        let sphereIdx = 0;
+        for (let i = followedAgent.currentWpIdx; i < followedAgent.waypoints.length; i++) {
+          const wp = followedAgent.waypoints[i];
+          const pos = new THREE.Vector3(wp.x, wp.y, wp.z + zOffset);
+          const sphere = waypointSpheres[sphereIdx];
           if (sphere) {
-            sphere.position.set(wp.x, wp.y, zOffset);
+            sphere.position.copy(pos);
             sphere.scale.setScalar(i === followedAgent.currentWpIdx ? 1.6 : 1.0); // highlight current target
             sphere.visible = true;
           }
+          sphereIdx++;
         }
+
+        // Place thick cylinders along the visible path
+        for (let i = 0; i < displayPoints.length - 1; i++) {
+          const p1 = displayPoints[i];
+          const p2 = displayPoints[i + 1];
+          const segment = pathSegments[i];
+          if (segment) {
+            const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            const dir = new THREE.Vector3().subVectors(p2, p1);
+            const len = dir.length();
+            
+            segment.position.copy(midpoint);
+            segment.scale.set(1, 1, len); // scale cylinder length
+            
+            const up = new THREE.Vector3(0, 0, 1);
+            if (len > 0.001) {
+              const alignDir = dir.clone().normalize();
+              segment.quaternion.setFromUnitVectors(up, alignDir);
+            }
+            segment.visible = true;
+          }
+        }
+        
         positionAttr.needsUpdate = true;
         pathGeometry.computeBoundingSphere();
         pathGeometry.computeBoundingBox();
@@ -133,10 +208,12 @@ async function main() {
       } else {
         pathLine.visible = false;
         waypointSpheres.forEach(s => s.visible = false);
+        pathSegments.forEach(s => s.visible = false);
       }
     } else {
       pathLine.visible = false;
       waypointSpheres.forEach(s => s.visible = false);
+      pathSegments.forEach(s => s.visible = false);
     }
   }
 
