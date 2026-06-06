@@ -162,8 +162,11 @@ if __name__ == "__main__":
     # Ensure dependencies are met
     try:
         import websocket
+        if not hasattr(websocket, "WebSocketApp"):
+            raise ImportError("Legacy websocket library detected. We need websocket-client.")
     except ImportError:
-        print("Required package 'websocket-client' is missing. Please run: pip install websocket-client")
+        print("Required package 'websocket-client' is missing or conflicts with legacy 'websocket'.")
+        print("Please resolve this by running: pip uninstall -y websocket && pip install websocket-client")
         sys.exit(1)
         
     connect_ws()

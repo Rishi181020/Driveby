@@ -8,6 +8,7 @@ export class AgentSocket {
     this.ws = null;
     this._tick = 0;
     this._connected = false;
+    this._backendConnected = false;
     this._connect();
   }
 
@@ -26,18 +27,20 @@ export class AgentSocket {
     this.ws.addEventListener('message', (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'actions') {
+        if (msg.type === 'backend_status') {
+          this._backendConnected = msg.connected;
+        } else if (msg.type === 'actions') {
           for (const act of msg.agents) {
             const agent = this.agents[act.id];
             if (agent) {
               if (act.reset) {
-                agent.reset();
+                agent.reset(true); // reset back to Point A of current route
               } else {
-                agent.applyAction({
+                agent.lastAction = {
                   throttle: act.throttle,
                   steering: act.steering,
                   brake: act.brake
-                });
+                };
               }
               agent.generation = act.generation;
               agent.bestScore = act.bestScore;
@@ -63,10 +66,15 @@ export class AgentSocket {
       if (!this._connected || this.ws.readyState !== WebSocket.OPEN) return;
 
       const payloadAgents = this.agents.map(agent => {
+        let isCollided = false;
+        if (agent.collided && !agent.collisionReported) {
+          isCollided = true;
+          agent.collisionReported = true;
+        }
         return {
           id: agent.id,
           state: agent.getStateVector(this.agents, this.environment),
-          collided: agent.collided,
+          collided: isCollided,
           score: agent.score
         };
       });

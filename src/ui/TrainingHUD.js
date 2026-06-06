@@ -11,6 +11,15 @@ export class TrainingHUD {
   }
 
   _createDOM() {
+    // Load Premium Fonts dynamically
+    if (!document.getElementById('hud-fonts')) {
+      const link = document.createElement('link');
+      link.id = 'hud-fonts';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap';
+      document.head.appendChild(link);
+    }
+
     // 1. Inject Styles
     if (!document.getElementById('training-hud-style')) {
       const style = document.createElement('style');
@@ -20,29 +29,31 @@ export class TrainingHUD {
           position: absolute;
           top: 16px;
           right: 16px;
-          width: 360px;
+          width: 320px;
           max-height: calc(100vh - 32px);
           overflow-y: auto;
-          background: rgba(10, 12, 16, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          color: #e2e8f0;
-          font-family: monospace;
-          padding: 16px;
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+          background: rgba(10, 12, 18, 0.82);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          color: #f1f5f9;
+          font-family: 'Outfit', sans-serif;
+          padding: 20px;
+          box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
           z-index: 1000;
           pointer-events: auto;
           user-select: none;
+          scrollbar-width: thin;
         }
 
         #training-hud h2 {
-          font-size: 15px;
-          font-weight: bold;
+          font-family: 'Outfit', sans-serif;
+          font-size: 14px;
+          font-weight: 700;
           margin-bottom: 12px;
           color: #38bdf8;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           padding-bottom: 6px;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -54,63 +65,73 @@ export class TrainingHUD {
 
         .agent-grid {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 6px;
           margin-bottom: 12px;
         }
 
         .agent-btn {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 6px;
           color: #94a3b8;
           padding: 6px 0;
           text-align: center;
           cursor: pointer;
           font-size: 11px;
-          transition: all 0.2s ease;
+          font-family: 'Outfit', sans-serif;
+          font-weight: 500;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .agent-btn:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(56, 189, 248, 0.12);
+          border-color: rgba(56, 189, 248, 0.3);
           color: #fff;
+          transform: translateY(-1px);
         }
 
         .agent-btn.active {
-          background: rgba(56, 189, 248, 0.25);
+          background: linear-gradient(135deg, rgba(56, 189, 248, 0.3) 0%, rgba(56, 189, 248, 0.1) 100%);
           border-color: #38bdf8;
           color: #38bdf8;
-          font-weight: bold;
-          box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+          font-weight: 700;
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
         }
 
         .telemetry-row {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
           font-size: 12px;
+          align-items: center;
         }
 
         .telemetry-label {
-          color: #64748b;
+          color: #94a3b8;
+          font-weight: 400;
         }
 
         .telemetry-val {
           color: #f1f5f9;
-          font-weight: bold;
+          font-weight: 700;
+          font-family: 'JetBrains Mono', monospace;
         }
 
         .state-vector-box {
-          background: rgba(0, 0, 0, 0.3);
-          border-radius: 6px;
-          padding: 10px;
+          background: rgba(0, 0, 0, 0.4);
+          border-radius: 8px;
+          padding: 12px;
           font-size: 11px;
-          line-height: 1.4;
+          line-height: 1.5;
           border: 1px solid rgba(255, 255, 255, 0.04);
+          max-height: 250px;
+          overflow-y: auto;
+          scrollbar-width: thin;
         }
 
         .state-group {
-          margin-bottom: 8px;
+          margin-bottom: 12px;
         }
 
         .state-group:last-child {
@@ -119,27 +140,32 @@ export class TrainingHUD {
 
         .state-group-title {
           color: #38bdf8;
-          font-weight: bold;
-          margin-bottom: 2px;
-          text-decoration: underline;
+          font-weight: 700;
+          margin-bottom: 4px;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .state-item {
           display: flex;
           justify-content: space-between;
           padding-left: 8px;
+          margin-bottom: 2px;
         }
 
         .state-item-name {
-          color: #94a3b8;
+          color: #64748b;
         }
 
         .state-item-val {
-          color: #10b981;
+          color: #34d399;
+          font-family: 'JetBrains Mono', monospace;
+          font-weight: 600;
         }
 
         .state-item-val.negative {
-          color: #ef4444;
+          color: #f87171;
         }
       `;
       document.head.appendChild(style);

@@ -49,7 +49,7 @@ export function buildColliders(map, physicsWorld) {
     window.buildingObstacles.push({ minX, maxX, minY, maxY, cx, cy });
 
     if (physicsWorld) {
-      physicsWorld.addBoxCollider(cx, cy, halfH, halfW, halfH, halfD);
+      physicsWorld.addBoxCollider(cx, cy, halfH, halfW, halfD, halfH);
     }
   }
 
