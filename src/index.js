@@ -1,5 +1,5 @@
 import { initMap } from './map/mapbox.js';
-import { sfLayer } from './map/sfLayer.js';
+import { sfLayer, mercatorScale } from './map/sfLayer.js';
 import { CameraToggle } from './ui/CameraToggle.js';
 import { Environment } from './map/Environment.js';
 import { PhysicsWorld } from './physics/PhysicsWorld.js';
@@ -42,12 +42,46 @@ async function main() {
 
   // --- WebSocket Relay Client ---
   const socket = new AgentSocket(agents, environment);
+  window.socket = socket;
 
   // --- Camera Toggle ---
   const cameras = new CameraToggle(map);
 
   // --- Training Telemetry Panel ---
   const hud = new TrainingHUD(agents);
+
+  // --- 3D A* Route Visualizer ---
+  const pathGeometry = new THREE.BufferGeometry();
+  const initPositions = new Float32Array(20 * 3);
+  pathGeometry.setAttribute('position', new THREE.BufferAttribute(initPositions, 3));
+  const pathMaterial = new THREE.LineBasicMaterial({ 
+    color: 0x00f0ff, 
+    linewidth: 4, // slightly thicker
+    depthTest: false,
+    depthWrite: false
+  });
+  const pathLine = new THREE.Line(pathGeometry, pathMaterial);
+  pathLine.renderOrder = 9998;
+  scene.add(pathLine);
+
+  // Glowing waypoint spheres
+  const pathPointsGroup = new THREE.Group();
+  scene.add(pathPointsGroup);
+  const m = mercatorScale();
+  const sphereGeo = new THREE.SphereGeometry(1.5 * m, 8, 8);
+  const sphereMat = new THREE.MeshBasicMaterial({
+    color: 0x00a8ff,
+    depthTest: false,
+    depthWrite: false
+  });
+  const waypointSpheres = [];
+  for (let i = 0; i < 20; i++) {
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.renderOrder = 9998;
+    sphere.visible = false;
+    pathPointsGroup.add(sphere);
+    waypointSpheres.push(sphere);
+  }
 
   // --- Clock ---
   const clock = new THREE.Clock();
@@ -75,6 +109,34 @@ async function main() {
     const followedAgent = agents[hud.selectedAgentId];
     if (followedAgent) {
       cameras.update(followedAgent);
+
+      // Render the A* path of the focused agent in 3D
+      if (followedAgent.waypoints && followedAgent.waypoints.length > 0) {
+        const positionAttr = pathGeometry.attributes.position;
+        const m = mercatorScale();
+        for (let i = 0; i < followedAgent.waypoints.length; i++) {
+          const wp = followedAgent.waypoints[i];
+          const zOffset = wp.z + 1.2 * m;
+          positionAttr.setXYZ(i, wp.x, wp.y, zOffset);
+          
+          const sphere = waypointSpheres[i];
+          if (sphere) {
+            sphere.position.set(wp.x, wp.y, zOffset);
+            sphere.scale.setScalar(i === followedAgent.currentWpIdx ? 1.6 : 1.0); // highlight current target
+            sphere.visible = true;
+          }
+        }
+        positionAttr.needsUpdate = true;
+        pathGeometry.computeBoundingSphere();
+        pathGeometry.computeBoundingBox();
+        pathLine.visible = true;
+      } else {
+        pathLine.visible = false;
+        waypointSpheres.forEach(s => s.visible = false);
+      }
+    } else {
+      pathLine.visible = false;
+      waypointSpheres.forEach(s => s.visible = false);
     }
   }
 

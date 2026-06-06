@@ -79,3 +79,8 @@ class SFLayer {
 }
 
 export const sfLayer = new SFLayer();
+
+export function mapToWorld(x, y, z = 0) {
+  const mc = new maplibregl.MercatorCoordinate(x, y, z);
+  return mc.toLngLat();
+}

@@ -31,13 +31,13 @@ export class AgentSocket {
             const agent = this.agents[act.id];
             if (agent) {
               if (act.reset) {
-                agent.reset();
+                agent.reset(true); // reset back to Point A of current route
               } else {
-                agent.applyAction({
+                agent.lastAction = {
                   throttle: act.throttle,
                   steering: act.steering,
                   brake: act.brake
-                });
+                };
               }
               agent.generation = act.generation;
               agent.bestScore = act.bestScore;
@@ -63,10 +63,15 @@ export class AgentSocket {
       if (!this._connected || this.ws.readyState !== WebSocket.OPEN) return;
 
       const payloadAgents = this.agents.map(agent => {
+        let isCollided = false;
+        if (agent.collided && !agent.collisionReported) {
+          isCollided = true;
+          agent.collisionReported = true;
+        }
         return {
           id: agent.id,
           state: agent.getStateVector(this.agents, this.environment),
-          collided: agent.collided,
+          collided: isCollided,
           score: agent.score
         };
       });

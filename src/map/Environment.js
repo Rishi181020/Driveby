@@ -21,7 +21,7 @@ export class Environment {
 
     this._addFootpaths(roads);
     this._addStreetLights(roads);
-    this._addTrees(roads);
+    // this._addTrees(roads);
     this._addPedestrians(roads);
   }
 
@@ -169,35 +169,59 @@ export class Environment {
     const offset = 7 * m;
 
     for (const line of roads) {
-      const pts = this._sampleAlong(line, 25);
+      if (line.length < 2) continue;
+      const pts = this._sampleAlong(line, 45); // sparser sampling
       for (const { pos, dir } of pts) {
-        if (Math.random() > 0.35) continue; // sparse
-        const side = new THREE.Vector3().crossVectors(dir, up).normalize();
-        const s = Math.random() < 0.5 ? 1 : -1;
-        const base = pos.clone().addScaledVector(side, s * offset);
+        if (Math.random() > 0.20) continue; // lower density
 
-        // a little capsule person
+        const side = new THREE.Vector3().crossVectors(dir, up).normalize();
+        
+        // Check if near intersection (start or end of this road segment)
+        const nearStart = pos.distanceTo(line[0]) < 15 * m;
+        const nearEnd = pos.distanceTo(line[line.length - 1]) < 15 * m;
+        const nearIntersection = nearStart || nearEnd;
+        
+        const isCrossing = nearIntersection && (Math.random() < 0.35); // 35% chance to be a crossing ped if near intersection
+        
         const ped = new THREE.Group();
         const mat = bodyMat.clone();
         mat.color = new THREE.Color().setHSL(Math.random(), 0.5, 0.5);
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.25 * m, 0.9 * m, 4, 8), mat);
+        
+        // capsule person
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22 * m, 0.8 * m, 4, 8), mat);
         body.rotation.x = Math.PI / 2;
-        body.position.z = 0.9 * m;
+        body.position.z = 0.8 * m;
         ped.add(body);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.22 * m, 8, 8),
+        
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * m, 8, 8),
           new THREE.MeshStandardMaterial({ color: 0xe0b48a }));
-        head.position.z = 1.6 * m;
+        head.position.z = 1.4 * m;
         ped.add(head);
 
-        ped.position.copy(base);
-        // walk back and forth along the footpath direction
-        ped.userData = {
-          dir: dir.clone(),
-          phase: Math.random() * Math.PI * 2,
-          range: (3 + Math.random() * 6) * m,
-          home: base.clone(),
-          speed: 0.5 + Math.random(),
-        };
+        if (isCrossing) {
+          // Crossing pedestrian: starts at road center, walks side-to-side (across road)
+          ped.position.copy(pos);
+          ped.userData = {
+            dir: side.clone(),
+            phase: Math.random() * Math.PI * 2,
+            range: 7.2 * m, // walk from sidewalk to sidewalk
+            home: pos.clone(),
+            speed: 0.6 + Math.random() * 0.4,
+          };
+        } else {
+          // Sidewalk pedestrian: walks parallel to road on one side
+          const s = Math.random() < 0.5 ? 1 : -1;
+          const base = pos.clone().addScaledVector(side, s * offset);
+          ped.position.copy(base);
+          ped.userData = {
+            dir: dir.clone(),
+            phase: Math.random() * Math.PI * 2,
+            range: (4 + Math.random() * 6) * m,
+            home: base.clone(),
+            speed: 0.7 + Math.random() * 0.6,
+          };
+        }
+        
         this.group.add(ped);
         this._peds.push(ped);
       }
