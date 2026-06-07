@@ -85,6 +85,19 @@ isn't running, cars fall back to scripted routes so the scene never freezes.
 
 ---
 
+## Highlights
+
+- OSM-derived SF road graph with directed A* routing across real downtown street geometry.
+- One-way streets, directional lane counts, and lane-change boundaries are enforced per road segment.
+- RL agents learn local control on assigned A-to-B routes instead of teleporting or free-roaming off-road.
+- Multi-lane roads allow legal lane changes while single-lane roads stay physically constrained.
+- Global traffic-light timing runs on one recurring simulation clock, with synchronized red/yellow/green phases.
+- Crosswalk pedestrians follow recurring walk/clearance cycles tied to the same citywide signal pattern.
+- Agents observe route progress, lane offset, traffic-light state, crosswalk occupancy, nearby cars, pedestrians, and buildings.
+- NPC traffic follows valid directed roads and responds to red lights and occupied crosswalks.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
