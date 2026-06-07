@@ -1,8 +1,8 @@
-# DriveBy — Multi-Agent RL Driving in Real San Francisco
+# DriveBy — Multi-Agent RL Driving Simulator
 
 DriveBy is a browser-based reinforcement-learning environment set in a real San
 Francisco downtown block. Ten autonomous car agents — each driven by its own
-neural network — learn to navigate real streets from a start point to a goal,
+neural network learn to navigate real streets from a start point to a goal,
 following an A\*-planned route while avoiding buildings, other cars, and
 pedestrians. A live dashboard lets you spectate any agent and watch it train. A
 human can also take control of a car with the keyboard.
