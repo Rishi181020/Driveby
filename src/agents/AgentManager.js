@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-import { CarAgent } from './CarAgent.js';
-=======
 import { NeuralAgent } from './NeuralAgent.js';
 import { SensorCamera } from './SensorCamera.js';
 import { RoadGraph } from '../map/RoadGraph.js';
->>>>>>> origin/ui-merged
 
 // 20 spawn points on real SF streets (Market, Montgomery, Kearny, etc.)
 const SPAWN_POINTS = [
@@ -17,14 +13,6 @@ const SPAWN_POINTS = [
   [-122.3956, 37.7958], [-122.4002, 37.7963],
 ];
 
-<<<<<<< HEAD
-const AGENT_COUNT = 100;
-
-export class AgentManager {
-  constructor(physicsWorld, scene) {
-    this.agents = [];
-    this._actionQueue = new Map(); // id → action
-=======
 const AGENT_COUNT = 10;
 const SENSORS_ENABLED = 10;
 
@@ -35,7 +23,6 @@ export class AgentManager {
     this.sfLayer = sfLayer;
     this._camerasInitialized = false;
     this.roadGraph = new RoadGraph();
->>>>>>> origin/ui-merged
 
     for (let i = 0; i < AGENT_COUNT; i++) {
       const spawn = SPAWN_POINTS[i % SPAWN_POINTS.length];
@@ -43,19 +30,6 @@ export class AgentManager {
       const lng = spawn[0] + (Math.random() - 0.5) * 0.0002;
       const lat = spawn[1] + (Math.random() - 0.5) * 0.0002;
       const hue = i / AGENT_COUNT;
-<<<<<<< HEAD
-      this.agents.push(new CarAgent(i, lng, lat, physicsWorld, scene, hue));
-    }
-  }
-
-  update(delta) {
-    for (const agent of this.agents) {
-      if (this._actionQueue.has(agent.id)) {
-        agent.applyAction(this._actionQueue.get(agent.id));
-        this._actionQueue.delete(agent.id);
-      }
-      agent.update(delta);
-=======
       this.agents.push(new NeuralAgent(i, lng, lat, physicsWorld, sfLayer.scene, hue, this.roadGraph));
     }
   }
@@ -77,7 +51,6 @@ export class AgentManager {
         this._actionQueue.delete(agent.id);
       }
       agent.update(delta, this.agents, environment);
->>>>>>> origin/ui-merged
     }
   }
 
@@ -87,11 +60,6 @@ export class AgentManager {
 
   applyActions(actions) {
     for (const action of actions) {
-<<<<<<< HEAD
-      this._actionQueue.set(action.id, action);
-    }
-  }
-=======
       if (typeof action.id !== 'number') {
         throw new Error('RL action is missing numeric id.');
       }
@@ -131,5 +99,4 @@ export class AgentManager {
       avgSpeed
     };
   }
->>>>>>> origin/ui-merged
 }

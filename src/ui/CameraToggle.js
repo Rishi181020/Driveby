@@ -1,62 +1,3 @@
-<<<<<<< HEAD
-const MODES = ['chase', 'birds-eye'];
-
-// Close 3rd-person chase cam.
-// Lower pitch = look more level down the street (buildings stop blocking the car).
-const CHASE = {
-  zoom: 19.5,       // close
-  pitch: 50,        // moderate — avoids looking through buildings ahead
-  aheadMetres: 8,   // small offset so car sits just below centre
-};
-const BIRDS_EYE = { zoom: 16.5, pitch: 0 };
-
-const M_PER_DEG_LAT = 111320;
-
-export class CameraToggle {
-  constructor(map) {
-    this.map = map;
-    this.modeIndex = 0;
-    this._label = document.getElementById('cam-label');
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'c' || e.key === 'C') this.toggle();
-    });
-    this._updateLabel();
-  }
-
-  toggle() {
-    this.modeIndex = (this.modeIndex + 1) % MODES.length;
-    this._updateLabel();
-  }
-
-  update(car) {
-    const s = car.getState();
-
-    if (MODES[this.modeIndex] === 'chase') {
-      // Centre exactly on the car (the car pins itself to this same centre).
-      this.map.jumpTo({
-        center: [s.lng, s.lat],
-        bearing: s.heading * 180 / Math.PI,
-        pitch: CHASE.pitch,
-        zoom: CHASE.zoom,
-      });
-    } else {
-      this.map.jumpTo({
-        center: [s.lng, s.lat],
-        bearing: 0,
-        pitch: BIRDS_EYE.pitch,
-        zoom: BIRDS_EYE.zoom,
-      });
-    }
-  }
-
-  _updateLabel() {
-    if (!this._label) return;
-    this._label.textContent =
-      MODES[this.modeIndex] === 'chase' ? '[C] Chase Cam' : "[C] Bird's Eye";
-  }
-}
-=======
 // Manages the two camera modes (Task 6). Because the Three.js scene is rendered
 // through Mapbox's shared camera, both modes drive the Mapbox camera, keeping
 // the player car centred so it never drives off-screen:
@@ -115,4 +56,3 @@ function shortestAngle(a, b) {
 }
 
 export { CameraToggle };
->>>>>>> origin/ui-merged

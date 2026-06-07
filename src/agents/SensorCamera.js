@@ -3,17 +3,10 @@ import * as THREE from 'three';
 const RES = 84;
 
 const OFFSETS = {
-<<<<<<< HEAD
-  front: { pos: [0, 0.5, 1.2],  rot: [0, 0, 0] },
-  back:  { pos: [0, 0.5, -1.2], rot: [0, Math.PI, 0] },
-  left:  { pos: [-1, 0.5, 0],   rot: [0, Math.PI / 2, 0] },
-  right: { pos: [1, 0.5, 0],    rot: [0, -Math.PI / 2, 0] },
-=======
   front: { pos: [0, 1.2, 2.5],  rot: [0, 0, 0] },
   back:  { pos: [0, 1.2, -2.5], rot: [0, Math.PI, 0] },
   left:  { pos: [-1.2, 1.2, 0],   rot: [0, -Math.PI / 2, 0] },
   right: { pos: [1.2, 1.2, 0],    rot: [0, Math.PI / 2, 0] },
->>>>>>> origin/ui-merged
 };
 
 export class SensorCamera {
